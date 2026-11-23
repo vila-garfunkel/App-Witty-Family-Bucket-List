@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AuthGate from './AuthGate'
 
 type Wish = { id: number; title: string; note: string; date: string; category: string; person: string; done: boolean }
 type IconName = 'plus' | 'arrow' | 'check' | 'edit' | 'trash' | 'calendar' | 'close' | 'spark' | 'heart' | 'list' | 'people'
@@ -53,6 +54,10 @@ function BucketArt() {
 }
 
 export default function App() {
+  return <AuthGate illustration={<BucketArt />}>{(session, signOut, signingOut) => <BucketList key={session.user.id} email={session.user.email ?? ''} onSignOut={signOut} signingOut={signingOut} />}</AuthGate>
+}
+
+function BucketList({ email, onSignOut, signingOut }: { email: string; onSignOut: () => Promise<void>; signingOut: boolean }) {
   const [wishes, setWishes] = useState(initialWishes)
   const [tab, setTab] = useState('All wishes')
   const [section, setSection] = useState('Our bucket list')
@@ -79,7 +84,7 @@ export default function App() {
         <nav className="desktop-nav" aria-label="Main navigation">
           {(['Our bucket list', 'Memories'] as const).map((item) => <button key={item} onClick={() => { setSection(item); setTab('All wishes') }} className={section === item ? 'nav-active' : ''}>{item}</button>)}
         </nav>
-        <button className="family-switch" onClick={() => setModal('family')}><span className="avatar-stack"><span className="avatar peach">J</span><span className="avatar sage">A</span><span className="avatar lavender">M</span><span className="avatar yellow">L</span></span><span>The Millers <span className="chevron">⌄</span></span></button>
+        <div className="account-actions"><button className="family-switch" onClick={() => setModal('family')}><span className="avatar-stack"><span className="avatar peach">J</span><span className="avatar sage">A</span><span className="avatar lavender">M</span><span className="avatar yellow">L</span></span><span>The Millers <span className="chevron">⌄</span></span></button><button className="account-signout" title={`Signed in as ${email}`} disabled={signingOut} onClick={() => void onSignOut()}>{signingOut ? 'Leaving…' : 'Log out'}</button></div>
       </header>
 
       <main className="page">
