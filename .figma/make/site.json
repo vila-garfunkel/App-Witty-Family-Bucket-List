@@ -1,0 +1,10 @@
+{
+  "description": "Organize family bucket-list wishes with dates, checkboxes, and easy editing so everyone can track fun plans and make memories together.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
