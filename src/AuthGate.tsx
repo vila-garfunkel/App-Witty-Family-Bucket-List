@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from './lib/supabase'
+import { inviteCallback, supabase } from './lib/supabase'
+import { needsInvitePassword } from './lib/invite'
 
 type AuthView = 'login' | 'register'
 const viewFromPath = (): AuthView => window.location.pathname === '/register' ? 'register' : 'login'
@@ -30,8 +31,13 @@ export default function AuthGate({ children, illustration }: {
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState('')
   const [confirmationEmail, setConfirmationEmail] = useState('')
+  const [inviteRequested, setInviteRequested] = useState(inviteCallback.requested)
+  const [inviteLinkError, setInviteLinkError] = useState(inviteCallback.failed)
+  const invitePending = useRef(inviteCallback.requested)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const register = view === 'register'
+  const settingPassword = Boolean(session && (inviteRequested || needsInvitePassword(session.user)))
+  const inviteScreen = settingPassword || inviteLinkError
 
   useEffect(() => {
     let active = true
@@ -40,22 +46,27 @@ export default function AuthGate({ children, illustration }: {
       authEventReceived = true
       if (!active) return
       setSession(nextSession)
+      if (invitePending.current && !nextSession) setInviteLinkError(true)
       setInitializing(false)
       if (nextSession) {
         setPassword('')
         setError('')
         setConfirmationEmail('')
-        if (['/login', '/register'].includes(window.location.pathname)) window.history.replaceState(null, '', '/')
+        if (invitePending.current || needsInvitePassword(nextSession.user)) {
+          window.history.replaceState(null, '', '/set-password')
+        } else if (['/login', '/register'].includes(window.location.pathname)) window.history.replaceState(null, '', '/')
       }
     })
     void supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!active || authEventReceived) return
       setSession(data.session)
+      if (invitePending.current && (!data.session || sessionError)) setInviteLinkError(true)
       if (sessionError) setError('We couldn’t check your session. Please sign in again.')
       setInitializing(false)
     }).catch(() => {
       if (!active || authEventReceived) return
       setError('We couldn’t connect. Check your connection and try again.')
+      if (invitePending.current) setInviteLinkError(true)
       setInitializing(false)
     })
     const onPopState = () => {
@@ -76,6 +87,46 @@ export default function AuthGate({ children, illustration }: {
     setShowPassword(false)
     setConfirmationEmail('')
     headingRef.current?.focus()
+  }
+
+  async function saveInvitePassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (busy || !session) return
+    setBusy(true)
+    setError('')
+    try {
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: { invite_password_set: true },
+      })
+      if (updateError) {
+        if (['session_not_found', 'refresh_token_not_found', 'refresh_token_already_used', 'bad_jwt'].includes(updateError.code ?? '') || updateError.status === 401 || updateError.status === 403) {
+          setInviteLinkError(true)
+        } else {
+          setError(updateError.code === 'weak_password'
+            ? 'This secret needs a little more strength. Try a longer mix of words, numbers, and symbols.'
+            : updateError.code === 'same_password'
+              ? 'That’s already your password. Pick a different secret to finish setting up.'
+              : 'We couldn’t save your password. Please try again in a moment.')
+        }
+        return
+      }
+      if (!data.user) {
+        setError('We couldn’t confirm the change. Please try again.')
+        return
+      }
+      setSession(current => current ? { ...current, user: data.user } : null)
+      setPassword('')
+      setShowPassword(false)
+      invitePending.current = false
+      setInviteRequested(false)
+      setInviteLinkError(false)
+      window.history.replaceState(null, '', '/')
+    } catch {
+      setError('A small bump in the road. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -125,6 +176,9 @@ export default function AuthGate({ children, illustration }: {
       if (signOutError) throw signOutError
       setSession(null)
       setEmail('')
+      invitePending.current = false
+      setInviteRequested(false)
+      setInviteLinkError(false)
       navigate('login')
     } catch {
       setError('We couldn’t sign you out. Please try again.')
@@ -134,12 +188,21 @@ export default function AuthGate({ children, illustration }: {
   }
 
   if (initializing) return <main className="auth-loading" role="status"><span className="brand-symbol"><AuthIcon name="heart" /></span><p>Gathering the good stuff…</p></main>
-  if (session) return <>{error && <div className="auth-signout-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss notification">Dismiss</button></div>}{children(session, signOut, signingOut)}</>
+  if (session && !inviteScreen) return <>{error && <div className="auth-signout-error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss notification">Dismiss</button></div>}{children(session, signOut, signingOut)}</>
+
+  function leaveInvite() {
+    if (busy || signingOut) return
+    if (session) { void signOut(); return }
+    invitePending.current = false
+    setInviteRequested(false)
+    setInviteLinkError(false)
+    navigate('login')
+  }
 
   return <div className="auth-page">
     <header className="auth-header">
-      <a className="brand" href="/login" onClick={e => { e.preventDefault(); navigate('login') }} aria-label="Family Bucket home"><span className="brand-symbol"><AuthIcon name="heart" /></span><span>family<span className="brand-light">bucket</span><span className="brand-dot">.</span></span></a>
-      <p>{register ? 'Already in the family?' : 'New around here?'} <a href={register ? '/login' : '/register'} onClick={e => { e.preventDefault(); if (!busy) navigate(register ? 'login' : 'register') }}>{register ? 'Log in' : 'Join the fun'} <span aria-hidden="true">↗</span></a></p>
+      <a className="brand" href="/login" onClick={e => { e.preventDefault(); if (inviteScreen) leaveInvite(); else if (!busy) navigate('login') }} aria-label="Family Bucket home"><span className="brand-symbol"><AuthIcon name="heart" /></span><span>family<span className="brand-light">bucket</span><span className="brand-dot">.</span></span></a>
+      {inviteScreen ? <p>A place in the bucket, just for you.</p> : <p>{register ? 'Already in the family?' : 'New around here?'} <a href={register ? '/login' : '/register'} onClick={e => { e.preventDefault(); if (!busy) navigate(register ? 'login' : 'register') }}>{register ? 'Log in' : 'Join the fun'} <span aria-hidden="true">↗</span></a></p>}
     </header>
     <main className="auth-layout">
       <section className="auth-story" aria-label="A little list. A lot of life.">
@@ -154,7 +217,32 @@ export default function AuthGate({ children, illustration }: {
         <div className="auth-story-footer"><AuthIcon name="heart" /><span>Not a to-do list. A together-do list.</span></div>
       </section>
       <section className="auth-form-panel">
-        {confirmationEmail ? <div className="auth-form-content auth-confirmation">
+        {inviteLinkError ? <div className="auth-form-content auth-confirmation">
+          <div className="auth-welcome-icon"><AuthIcon name="mail" /></div>
+          <span className="eyebrow">A LITTLE INVITE DETOUR</span>
+          <h1 ref={headingRef} tabIndex={-1}>This link’s had<br /><span>its adventure.</span></h1>
+          <p role="alert">We couldn’t verify your invitation. It may have expired, already been used, or lost its way.</p>
+          <div className="auth-mail-tip"><AuthIcon name="mail" /><p>Ask the person who invited you for a fresh invitation. Already chose a password? You can log in as usual.</p></div>
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          <button className="primary-button auth-submit" disabled={signingOut} onClick={leaveInvite}>{signingOut ? 'One moment…' : 'Back to log in'}<AuthIcon name="arrow" /></button>
+        </div> : settingPassword ? <div className="auth-form-content auth-invite">
+          <div className="auth-welcome-icon"><AuthIcon name="heart" /></div>
+          <span className="eyebrow">YOUR INVITATION? ACCEPTED.</span>
+          <h1 ref={headingRef} tabIndex={-1}>You’re on the list.<br /><span>Make it official.</span></h1>
+          <p>One little password, then you’re in. The adventures can wait another ten seconds.</p>
+          <div className="auth-invited-email"><span className="auth-invite-check"><AuthIcon name="check" /></span><div><span>YOUR INVITED EMAIL</span><strong>{session?.user.email}</strong></div><AuthIcon name="mail" /></div>
+          <form onSubmit={saveInvitePassword} aria-busy={busy}>
+            <fieldset disabled={busy || signingOut}>
+              <label htmlFor="invite-password">Choose your password<span>Not the family dog’s name.</span></label>
+              <div className="auth-input-wrap"><AuthIcon name="lock" /><input id="invite-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" autoFocus required minLength={8} placeholder="At least 8 characters of mystery" value={password} onChange={e => setPassword(e.target.value)} aria-describedby={`invite-password-hint${error ? ' invite-password-error' : ''}`} /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}><AuthIcon name={showPassword ? 'hidden' : 'eye'} /></button></div>
+              <p className="auth-password-hint" id="invite-password-hint">8+ characters. A few unexpected twists make it stronger.</p>
+              {error && <p className="auth-error" id="invite-password-error" role="alert">{error}</p>}
+              <button className="primary-button auth-submit" type="submit">{busy ? 'Making it official…' : 'Save my secret. Let’s go.'}<AuthIcon name="arrow" /></button>
+            </fieldset>
+          </form>
+          <div className="auth-reassurance"><AuthIcon name="lock" /><span>Next time, log in with this email and your new password.</span></div>
+          <button className="auth-change-email" disabled={busy || signingOut} onClick={leaveInvite}>{signingOut ? 'Signing out…' : 'Not your invitation? Sign out'}</button>
+        </div> : confirmationEmail ? <div className="auth-form-content auth-confirmation">
           <div className="auth-welcome-icon"><AuthIcon name="mail" /></div>
           <span className="eyebrow">ONE TINY DETOUR</span>
           <h1 ref={headingRef} tabIndex={-1}>You’ve got mail.<br /><span>(The good kind.)</span></h1>

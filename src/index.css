@@ -71,6 +71,13 @@
 .auth-mail-tip>svg { flex-shrink: 0; width: 17px; height: 17px; margin-top: 3px; }
 .auth-mail-tip p { font-size: 11px; line-height: 1.8; }
 .auth-change-email { display: block; font-size: 10px; color: #aa7d64; margin: 20px auto 0; }
+.auth-invited-email { display: flex; align-items: center; gap: 11px; padding: 14px; background: #eef1e7; border: 1px solid #e0e5d4; border-radius: 8px; margin: 25px 0; }
+.auth-invite-check { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: #dce5cf; color: #7b906a; flex-shrink: 0; }
+.auth-invite-check>svg { width: 15px; height: 15px; }
+.auth-invited-email>div { min-width: 0; flex: 1; }
+.auth-invited-email>div>span { display: block; color: #98a086; font-size: 6px; font-weight: 650; letter-spacing: 1.3px; }
+.auth-invited-email strong { display: block; color: #6c7c5d; font-size: 11px; font-weight: 500; margin-top: 4px; overflow-wrap: anywhere; }
+.auth-invited-email>svg { width: 16px; height: 16px; color: #a2ae93; flex-shrink: 0; }
 .auth-loading { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; color: #8c927d; font-size: 12px; }
 .auth-loading .brand-symbol { width: 45px; height: 48px; }
 .account-actions { display: flex; align-items: center; gap: 17px; }
