@@ -1,0 +1,3 @@
+kcolnwxuvsdvfdpclhjt
+
+npx supabase@2 functions deploy make-server-a728503c --project-ref kcolnwxuvsdvfdpclhjt --use-api

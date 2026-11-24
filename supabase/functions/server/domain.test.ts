@@ -47,7 +47,7 @@ test('a user cannot create a second family or join two simultaneously', () => {
   const s = setup(); create(s); join(s)
   assert.throws(() => applyAction(s, 'bob', { type: 'family.create', name: 'Second' }, entropy))
   assert.throws(() => join(s))
-  applyAction(s, 'alice', { type: 'family.leave' }, entropy)
+  applyAction(s, 'alice', { type: 'family.disband' }, entropy)
   assert.throws(() => create(s), /One family creation/)
 })
 test('leaving preserves personal wishes and removes access to other members’ wishes', () => {
@@ -69,10 +69,11 @@ test('a creator cannot kick themselves', () => {
   const s = setup(); create(s)
   assert.throws(() => applyAction(s, 'alice', { type: 'family.kick', memberId: 'alice' }, entropy))
 })
-test('creator leaving disbands the family for everyone without deleting their wishes', () => {
+test('creators must explicitly disband; the family is archived without deleting wishes', () => {
   const s = setup(); create(s); join(s); wish(s, 'alice'); wish(s, 'bob')
-  applyAction(s, 'alice', { type: 'family.leave' }, entropy)
-  assert.equal(Object.keys(s.families).length, 0)
+  assert.throws(() => applyAction(s, 'alice', { type: 'family.leave' }, entropy), /Disband/)
+  applyAction(s, 'alice', { type: 'family.disband' }, entropy)
+  assert.equal(s.families['family-a'].disbandedAt, entropy.now)
   assert.equal(s.profiles.bob.groupId, null)
   assert.equal(s.profiles.alice.hasCreatedGroup, true)
   assert.equal(Object.keys(s.wishes).length, 2)
@@ -116,9 +117,9 @@ test('deleting and removed accounts cannot read or mutate app data', () => {
   assert.throws(() => workspace(s, 'alice'))
   assert.throws(() => applyAction(s, 'alice', { type: 'onboarding.skip' }, entropy))
 })
-test('input validation rejects blank aliases, malformed dates, and unknown categories', () => {
+test('input validation rejects oversized names, malformed dates, and unknown categories', () => {
   const s = setup()
-  assert.throws(() => applyAction(s, 'alice', { type: 'profile.alias', alias: '  ' }, entropy))
+  assert.throws(() => applyAction(s, 'alice', { type: 'profile.alias', alias: 'x'.repeat(41) }, entropy))
   assert.throws(() => applyAction(s, 'alice', { type: 'wish.save', title: 'Test', date: '2026-02-31', category: 'Adventure' }, entropy), /valid date/)
   assert.throws(() => applyAction(s, 'alice', { type: 'wish.save', title: 'Test', date: '2026-02-21', category: 'Anything' }, entropy), /category/)
 })
