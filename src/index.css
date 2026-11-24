@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Kalam:wght@400&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
 @import 'tailwindcss';
+@import './workspace.css';
 
 @layer base {
   body { font-family: 'DM Sans', sans-serif; background: #fbfaf7; color: #303b33; -webkit-font-smoothing: antialiased; }
