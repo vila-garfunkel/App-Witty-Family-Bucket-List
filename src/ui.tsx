@@ -1,4 +1,4 @@
-type IconName = 'plus' | 'arrow' | 'check' | 'edit' | 'trash' | 'calendar' | 'close' | 'spark' | 'heart' | 'list' | 'people' | 'message' | 'send' | 'back' | 'search' | 'lock' | 'clock'
+type IconName = 'plus' | 'arrow' | 'check' | 'edit' | 'trash' | 'calendar' | 'close' | 'spark' | 'heart' | 'list' | 'people' | 'message' | 'send' | 'back' | 'search' | 'lock' | 'clock' | 'phone'
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -19,6 +19,7 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     search: <><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></>,
     lock: <><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v6l4 2" /></>,
+    phone: <><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M10 5h4m-3 14h2" /></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }

@@ -1,0 +1,19 @@
+.download-app-banner { position: sticky; top: 0; z-index: 15; background: #eaf0df; border-bottom: 1px solid #d9e3ca; color: #637852; }
+.download-app-content { width: min(1160px, 90%); min-height: 54px; margin: auto; display: flex; align-items: center; gap: 13px; padding: 8px 0; }
+.download-app-symbol { display: grid; place-items: center; width: 30px; height: 32px; border: 1px solid #d4dfc2; background: #e0e8d2; color: #7c9567; border-radius: 9px; flex-shrink: 0; transform: rotate(-6deg); }
+.download-app-content>p { flex: 1; display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 12px; font-size: 11px; line-height: 1.6; }
+.download-app-content strong { font-weight: 650; }
+.download-app-content>p>span { color: #7f8e71; font-size: 10px; }
+.download-app-content>a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #fffdf5; color: #687f54; border: 1px solid #d5dfc6; border-radius: 6px; padding: 7px 11px; font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0; transition: background .18s; }
+.download-app-content>a:hover { background: #f5f8ec; }
+.download-app-content>button { color: #8a9b77; display: grid; place-items: center; width: 30px; height: 32px; border-radius: 6px; flex-shrink: 0; }
+.download-app-content>button:hover { background: #dfe8d1; color: #61764f; }
+@media (max-width: 720px) {
+  .download-app-content { width: 88%; gap: 9px; min-height: 56px; }
+  .download-app-symbol { width: 26px; height: 29px; border-radius: 8px; }
+  .download-app-content>p { font-size: 10px; line-height: 1.5; max-width: 200px; }
+  .download-app-content>p>span { display: none; }
+  .download-app-content>a { font-size: 9px; padding: 8px; gap: 5px; margin-left: auto; }
+  .download-app-content>a>svg { display: none; }
+  .download-app-content>button { width: 27px; min-height: 36px; }
+}
